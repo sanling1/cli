@@ -122,6 +122,8 @@ jobs:
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Build
+        env:
+          CODEQL_EXTRACTOR_GO_BUILD_TRACING: 'on'
         run: go build ./...
 
       - name: Perform CodeQL analysis
