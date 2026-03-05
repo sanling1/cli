@@ -1,8 +1,16 @@
-# cli
+# 37signals CLI tools
 
-Shared Go toolkit for building 37signals product CLIs.
+Command-line tools for working with Basecamp, HEY, and Fizzy. Full API coverage, structured JSON output, and built-in agent skills make them equally fluent for human operators and AI agents. Use them to automate workflows, build integrations, or just get things done without leaving the terminal.
 
-Provides reusable packages, seed templates, GitHub Actions, and a rubric specification that standardize CLI development across 37signals products (Basecamp, HEY, Fizzy, etc.).
+| CLI | What it does | Repo |
+|-----|-------------|------|
+| `basecamp` | Manage projects, messages, to-dos, and more | [basecamp/basecamp-cli](https://github.com/basecamp/basecamp-cli) |
+| `hey` | Triage email, manage contacts, and search | [basecamp/hey-cli](https://github.com/basecamp/hey-cli) |
+| `fizzy` | Work with boards, cards, and columns | [basecamp/fizzy-cli](https://github.com/basecamp/fizzy-cli) |
+
+---
+
+This repo is the shared Go toolkit that powers all three CLIs. It provides reusable packages, seed templates, GitHub Actions, and a rubric specification that standardize CLI development across 37signals products.
 
 ## Packages
 
