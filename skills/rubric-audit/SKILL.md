@@ -86,11 +86,11 @@ Produce a scorecard:
 
 | Tier | Score | Max |
 |------|-------|-----|
-| T1: Agent Contract | X/21 | 21 |
-| T2: Reliability | X/14 | 14 |
-| T3: Agent Integration | X/9 | 9 |
-| T4: Distribution | X/19 | 19 |
-| **Total** | **X/63** | **63** |
+| T1: Agent Contract | X/26 | 26 |
+| T2: Reliability | X/16 | 16 |
+| T3: Agent Integration | X/11 | 11 |
+| T4: Distribution | X/29 | 29 |
+| **Total** | **X/82** | **82** |
 
 ### Critical Gaps
 1. [Most impactful gap]
