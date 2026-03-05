@@ -6,7 +6,7 @@ changelog:
     authors:
       - dependabot[bot]
   categories:
-    - title: Breaking Changes
+    - title: "⚠️ Breaking Changes"
       labels:
         - breaking
     - title: Features

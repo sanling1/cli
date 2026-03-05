@@ -9,6 +9,7 @@ permissions:
   contents: write
   security-events: write
   pull-requests: read
+  models: read
 
 jobs:
   security:
@@ -74,7 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, security]
     permissions:
-      contents: read
+      contents: write
+      models: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -88,8 +90,105 @@ jobs:
             exit 1
           fi
 
-      - name: Confirm module availability
-        run: echo "Tagged Go module ${{ github.ref_name }} published via module proxy"
+      - name: Build changelog context
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          DIFF_FILE=/tmp/diff.txt
+          if [ -z "$PREV_TAG" ]; then
+            COMMITS=$(git log --oneline --no-decorate)
+            git diff --stat 4b825dc642cb6eb9a060e54bf899d69f82a3ef17 HEAD > "$DIFF_FILE"
+          else
+            COMMITS=$(git log --oneline --no-decorate "${PREV_TAG}..HEAD")
+            git diff "${PREV_TAG}..HEAD" -- '*.go' 'go.mod' > "$DIFF_FILE"
+          fi
+          {
+            echo "Commits:"
+            echo "$COMMITS"
+            echo ""
+            echo "Diff summary:"
+            head -c 80000 "$DIFF_FILE"
+          } > /tmp/user-message.txt
+          # Splice into prompt YAML
+          python3 -c "
+          with open('.github/prompts/summarize-changelog.prompt.yml') as f:
+              lines = f.readlines()
+          with open('/tmp/user-message.txt') as f:
+              user_msg = f.read()
+          insert_at = len(lines)
+          for i, line in enumerate(lines):
+              if i == 0: continue
+              if line.strip() and not line[0].isspace():
+                  insert_at = i
+                  break
+          entry = ['  - role: user\n', '    content: |\n']
+          for ln in user_msg.splitlines():
+              entry.append('      ' + ln + '\n')
+          lines[insert_at:insert_at] = entry
+          with open('/tmp/prompt.yml', 'w') as f:
+              f.writelines(lines)
+          try:
+              import yaml
+              doc = yaml.safe_load(open('/tmp/prompt.yml'))
+              assert doc['messages'][-1]['role'] == 'user', 'prompt splice failed'
+          except ImportError:
+              pass
+          "
+        continue-on-error: true
+
+      - name: Generate AI changelog
+        id: ai-changelog
+        uses: actions/ai-inference@e09e65981758de8b2fdab13c2bfb7c7d5493b0b6 # v2.0.7
+        continue-on-error: true
+        with:
+          prompt-file: /tmp/prompt.yml
+
+      - name: Set changelog env
+        run: |
+          RESPONSE_FILE="${{ steps.ai-changelog.outputs.response-file }}"
+          if [ -n "$RESPONSE_FILE" ] && [ -f "$RESPONSE_FILE" ]; then
+            # Strip markdown code fences that AI models wrap around responses
+            sed -i '/^```\(markdown\)\?$/d' "$RESPONSE_FILE"
+            DELIM="CHANGELOG_DELIM_$(openssl rand -hex 8)"
+            {
+              echo "RELEASE_CHANGELOG<<${DELIM}"
+              cat "$RESPONSE_FILE"
+              echo ""
+              echo "${DELIM}"
+            } >> $GITHUB_ENV
+          else
+            echo "RELEASE_CHANGELOG=" >> $GITHUB_ENV
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          NOTES=""
+          if [ -n "$RELEASE_CHANGELOG" ]; then
+            NOTES="${RELEASE_CHANGELOG}
+
+          ---
+
+          "
+          fi
+          NOTES="${NOTES}### Install
+
+          \`\`\`
+          go get github.com/basecamp/cli@${TAG}
+          \`\`\`"
+
+          if [[ "$TAG" == *"-"* ]]; then
+            PRERELEASE="--prerelease"
+          else
+            PRERELEASE=""
+          fi
+
+          gh release create "$TAG" \
+            --title "v${TAG#v}" \
+            --notes "$NOTES" \
+            --generate-notes \
+            $PRERELEASE
 
   sync-skills:
     name: Sync skills
