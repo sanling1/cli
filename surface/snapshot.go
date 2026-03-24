@@ -129,6 +129,12 @@ func walkCommand(cmd *cobra.Command, path string, entries *[]Entry) {
 	// Emit ARG entries from the command's Use string
 	*entries = append(*entries, parseArgs(cmd, path)...)
 
+	// Initialize Cobra's lazy-added flags (help, version) that are only
+	// set up during Execute() by default. Without this, walking the tree
+	// without executing misses these inherited flags.
+	cmd.InitDefaultHelpFlag()
+	cmd.InitDefaultVersionFlag()
+
 	// Collect and sort all flags visible at this command level:
 	// local flags, persistent flags on this command, and inherited persistent flags.
 	var flags []Entry
